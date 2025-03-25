@@ -1,1 +1,1 @@
-3. Create a `.env` file in the root directory with the following variables:
+3. Create a `.env` file in the root directory with your Firebase configuration:
