@@ -1,0 +1,7 @@
+5. Open your browser and navigate to `http://localhost:3000`
+
+### Deployment
+
+The application can be deployed to Vercel:
+
+1. Install the Vercel CLI:

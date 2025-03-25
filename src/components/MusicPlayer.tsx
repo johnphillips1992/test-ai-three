@@ -1,214 +1,193 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import './MusicPlayer.css';
+import { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  IconButton,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Paper,
+  Avatar,
+} from '@mui/material';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
+import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 
 interface MusicPlayerProps {
-  focusLevel: number;
+  track: any; // Track object from Spotify API
+  recommendedTracks: any[]; // Array of track objects
+  onPlayTrack: (track: any) => void;
 }
 
-interface Track {
-  id: string;
-  name: string;
-  artist: string;
-  url: string;
-  coverUrl: string;
-  tempo: 'slow' | 'medium' | 'fast';
-}
-
-const MusicPlayer: React.FC<MusicPlayerProps> = ({ focusLevel }) => {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+const MusicPlayer = ({ track, recommendedTracks, onPlayTrack }: MusicPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(0.7);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const { currentUser, getUserData } = useAuth();
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
 
-  // Load tracks on component mount
+  // Initialize audio player on track change
   useEffect(() => {
-    fetchTracks();
-  }, []);
+    if (!track) return;
 
-  // Fetch tracks from the API
-  const fetchTracks = async () => {
-    try {
-      // Get user preferences if available
-      let preferredGenre = 'classical';
-      if (currentUser) {
-        const userData = await getUserData();
-        if (userData && userData.preferredGenre) {
-          preferredGenre = userData.preferredGenre;
-        }
-      }
-
-      // Fetch tracks from API
-      const response = await fetch(`/api/tracks?genre=${preferredGenre}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch tracks');
-      }
-      
-      const data = await response.json();
-      setTracks(data.tracks);
-      
-      // Set initial track based on focus level
-      selectTrackBasedOnFocus(data.tracks, focusLevel);
-    } catch (error) {
-      console.error('Error fetching tracks:', error);
-    }
-  };
-
-  // Select track based on focus level
-  const selectTrackBasedOnFocus = (availableTracks: Track[], level: number) => {
-    if (!availableTracks || availableTracks.length === 0) return;
+    // Create an audio element to play the preview
+    const audio = new Audio(track.preview_url);
     
-    let tempoCategory: 'slow' | 'medium' | 'fast';
+    // Set up event listeners
+    audio.addEventListener('loadedmetadata', () => {
+      setDuration(audio.duration);
+    });
     
-    if (level < 0.3) {
-      tempoCategory = 'slow';
-    } else if (level < 0.7) {
-      tempoCategory = 'medium';
+    audio.addEventListener('timeupdate', () => {
+      setProgress(audio.currentTime);
+    });
+    
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      
+      // Play next track
+      const currentIndex = recommendedTracks.findIndex(t => t.id === track.id);
+      if (currentIndex < recommendedTracks.length - 1) {
+        onPlayTrack(recommendedTracks[currentIndex + 1]);
+      }
+    });
+    
+    // Play the track
+    audio.play().then(() => {
+      setIsPlaying(true);
+    }).catch(err => {
+      console.error('Error playing audio:', err);
+      setIsPlaying(false);
+    });
+    
+    // Clean up on unmount or track change
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', () => {});
+      audio.removeEventListener('timeupdate', () => {});
+      audio.removeEventListener('ended', () => {});
+    };
+  }, [track, recommendedTracks, onPlayTrack]);
+
+  // Play or pause the current track
+  const togglePlay = () => {
+    const audio = document.querySelector('audio');
+    if (!audio) return;
+    
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
     } else {
-      tempoCategory = 'fast';
-    }
-    
-    // Filter tracks by tempo category
-    const matchingTracks = availableTracks.filter(track => track.tempo === tempoCategory);
-    
-    if (matchingTracks.length > 0) {
-      // Select a random track from matching tempo category
-      const randomIndex = Math.floor(Math.random() * matchingTracks.length);
-      setCurrentTrack(matchingTracks[randomIndex]);
-      
-      // Start playing the selected track
+      audio.play();
       setIsPlaying(true);
     }
   };
-  
-  // Update track when focus level changes significantly
-  useEffect(() => {
-    if (tracks.length === 0) return;
-    
-    // Only change music if focus level changes by more than 0.3
-    if (!currentTrack) {
-      selectTrackBasedOnFocus(tracks, focusLevel);
-      return;
-    }
-    
-    let newTempoCategory: 'slow' | 'medium' | 'fast';
-    
-    if (focusLevel < 0.3) {
-      newTempoCategory = 'slow';
-    } else if (focusLevel < 0.7) {
-      newTempoCategory = 'medium';
-    } else {
-      newTempoCategory = 'fast';
-    }
-    
-    // Only change if the tempo category is different
-    if (currentTrack.tempo !== newTempoCategory) {
-      selectTrackBasedOnFocus(tracks, focusLevel);
-    }
-  }, [focusLevel, tracks]);
 
-  // Handle play state changes
-  useEffect(() => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch(err => {
-          console.error('Error playing audio:', err);
-          setIsPlaying(false);
-        });
-      } else {
-        audioRef.current.pause();
-      }
+  // Play the previous track
+  const playPrevTrack = () => {
+    if (!track || recommendedTracks.length === 0) return;
+    
+    const currentIndex = recommendedTracks.findIndex(t => t.id === track.id);
+    if (currentIndex > 0) {
+      onPlayTrack(recommendedTracks[currentIndex - 1]);
     }
-  }, [isPlaying, currentTrack]);
-
-  // Update volume when changed
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  // Toggle play/pause
-  const togglePlay = () => {
-    setIsPlaying(!isPlaying);
   };
 
-  // Skip to next track
-  const nextTrack = () => {
-    if (tracks.length === 0) return;
+  // Play the next track
+  const playNextTrack = () => {
+    if (!track || recommendedTracks.length === 0) return;
     
-    const currentIndex = currentTrack ? tracks.findIndex(t => t.id === currentTrack.id) : -1;
-    const nextIndex = (currentIndex + 1) % tracks.length;
-    setCurrentTrack(tracks[nextIndex]);
-    setIsPlaying(true);
+    const currentIndex = recommendedTracks.findIndex(t => t.id === track.id);
+    if (currentIndex < recommendedTracks.length - 1) {
+      onPlayTrack(recommendedTracks[currentIndex + 1]);
+    }
   };
 
-  // Handle volume change
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVolume(parseFloat(e.target.value));
+  // Format time in seconds to mm:ss
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Handle track end
-  const handleTrackEnd = () => {
-    nextTrack();
-  };
+  if (!track) {
+    return (
+      <Box sx={{ p: 2, textAlign: 'center' }}>
+        <Typography>No track selected</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div className="music-player">
-      {currentTrack ? (
-        <>
-          <div className="track-info">
-            <div className="album-cover">
-              <img src={currentTrack.coverUrl} alt={currentTrack.name} />
-            </div>
-            <div className="track-details">
-              <h3>{currentTrack.name}</h3>
-              <p>{currentTrack.artist}</p>
-              <p className="tempo-indicator">Tempo: {currentTrack.tempo}</p>
-            </div>
-          </div>
-          <audio
-            ref={audioRef}
-            src={currentTrack.url}
-            onEnded={handleTrackEnd}
-          />
-          <div className="player-controls">
-            <button onClick={togglePlay} className="play-pause-btn">
-              {isPlaying ? '⏸️' : '▶️'}
-            </button>
-            <button onClick={nextTrack} className="next-btn">
-              ⏭️
-            </button>
-            <div className="volume-control">
-              <span>🔊</span>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-              />
-            </div>
-          </div>
-          <div className="focus-indicator">
-            <p>Current Focus Level: {Math.round(focusLevel * 100)}%</p>
-            <div className="progress-bar">
-              <div 
-                className="progress" 
-                style={{ width: `${focusLevel * 100}%` }}
-              ></div>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="loading-tracks">
-          <p>Loading music tracks...</p>
-        </div>
-      )}
-    </div>
+    <Box>
+      <Box sx={{ textAlign: 'center', mb: 2 }}>
+        <Avatar
+          src={track.album.images[0]?.url}
+          alt={track.name}
+          sx={{ width: 150, height: 150, margin: '0 auto', mb: 2 }}
+        />
+        <Typography variant="h6" noWrap>{track.name}</Typography>
+        <Typography variant="body2" color="text.secondary" noWrap>
+          {track.artists.map((artist: any) => artist.name).join(', ')}
+        </Typography>
+      </Box>
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <Typography variant="caption" sx={{ mr: 1 }}>
+          {formatTime(progress)}
+        </Typography>
+        <LinearProgress
+          variant="determinate"
+          value={(progress / duration) * 100}
+          sx={{ flexGrow: 1 }}
+        />
+        <Typography variant="caption" sx={{ ml: 1 }}>
+          {formatTime(duration)}
+        </Typography>
+      </Box>
+      
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <IconButton onClick={playPrevTrack}>
+          <SkipPreviousIcon />
+        </IconButton>
+        <IconButton onClick={togglePlay}>
+          {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+        </IconButton>
+        <IconButton onClick={playNextTrack}>
+          <SkipNextIcon />
+        </IconButton>
+      </Box>
+      
+      <Divider sx={{ my: 2 }} />
+      
+      <Typography variant="subtitle2" gutterBottom>
+        Recommended Tracks
+      </Typography>
+      
+      <List dense sx={{ maxHeight: 200, overflow: 'auto' }}>
+        {recommendedTracks.map((recommendedTrack) => (
+          <ListItem
+            key={recommendedTrack.id}
+            button
+            selected={recommendedTrack.id === track.id}
+            onClick={() => onPlayTrack(recommendedTrack)}
+          >
+            <Avatar
+              src={recommendedTrack.album.images[2]?.url}
+              alt={recommendedTrack.name}
+              sx={{ width: 30, height: 30, mr: 2 }}
+            />
+            <ListItemText
+              primary={recommendedTrack.name}
+              secondary={recommendedTrack.artists.map((artist: any) => artist.name).join(', ')}
+              primaryTypographyProps={{ noWrap: true }}
+              secondaryTypographyProps={{ noWrap: true }}
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
   );
 };
 
