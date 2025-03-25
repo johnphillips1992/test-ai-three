@@ -1,19 +1,20 @@
-import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
+import { lazy, Suspense } from 'react';
+import { CircularProgress, Box } from '@mui/material';
 import { useAuth } from './hooks/useAuth';
-import Layout from './components/Layout';
+import Layout from './components/Layout/Layout';
 
-// Lazy loaded pages for better performance
-const HomePage = lazy(() => import('./pages/HomePage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+// Lazy-loaded components
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Login = lazy(() => import('./pages/Auth/Login'));
+const Register = lazy(() => import('./pages/Auth/Register'));
+const Profile = lazy(() => import('./pages/Profile/Profile'));
+const FocusSession = lazy(() => import('./pages/FocusSession/FocusSession'));
+const History = lazy(() => import('./pages/History/History'));
+const NotFound = lazy(() => import('./pages/NotFound/NotFound'));
 
-// Loading fallback for lazy loaded components
-const PageLoading = () => (
+// Loading component for Suspense
+const LoadingFallback = () => (
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
     <CircularProgress />
   </Box>
@@ -22,54 +23,38 @@ const PageLoading = () => (
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
-    return <PageLoading />;
+    return <LoadingFallback />;
   }
-
+  
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
+  
   return <>{children}</>;
 };
 
-const App = () => {
-  const { initializeAuth } = useAuth();
-
-  // Initialize authentication on app load
-  useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
-
+function App() {
   return (
-    <Suspense fallback={<PageLoading />}>
+    <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          <Route 
-            path="dashboard" 
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="profile" 
-            element={
-              <ProtectedRoute>
-                <ProfilePage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="*" element={<NotFoundPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Dashboard />} />
+          <Route path="focus" element={<FocusSession />} />
+          <Route path="history" element={<History />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );
-};
+}
 
 export default App;
