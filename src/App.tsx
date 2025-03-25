@@ -1,62 +1,74 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
-import NotFound from './pages/NotFound';
-import PrivateRoute from './components/PrivateRoute';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Loading from './components/Loading';
-import './App.css';
+import { Box, CircularProgress } from '@mui/material';
+import { useAuth } from './hooks/useAuth';
+import Layout from './components/Layout';
 
-const App: React.FC = () => {
-  const { currentUser, loading } = useAuth();
-  const [appLoaded, setAppLoaded] = useState(false);
+// Lazy loaded pages for better performance
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-  useEffect(() => {
-    // Simulate checking for facial recognition libraries and other dependencies
-    setTimeout(() => {
-      setAppLoaded(true);
-    }, 1500);
-  }, []);
+// Loading fallback for lazy loaded components
+const PageLoading = () => (
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+    <CircularProgress />
+  </Box>
+);
 
-  if (loading || !appLoaded) {
-    return <Loading />;
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <PageLoading />;
   }
 
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const App = () => {
+  const { initializeAuth } = useAuth();
+
+  // Initialize authentication on app load
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
   return (
-    <div className="app">
-      <Navbar />
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={!currentUser ? <Login /> : <Navigate to="/dashboard" />} />
-          <Route path="/register" element={!currentUser ? <Register /> : <Navigate to="/dashboard" />} />
-          <Route
-            path="/dashboard"
+    <Suspense fallback={<PageLoading />}>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<HomePage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route 
+            path="dashboard" 
             element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } 
           />
-          <Route
-            path="/profile"
+          <Route 
+            path="profile" 
             element={
-              <PrivateRoute>
-                <Profile />
-              </PrivateRoute>
-            }
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } 
           />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 };
 
