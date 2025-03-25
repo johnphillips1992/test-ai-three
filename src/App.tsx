@@ -1,62 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase/config';
-import { UserProvider } from './contexts/UserContext';
-
-// Components
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
+import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
-import FocusDetection from './pages/FocusDetection';
 import NotFound from './pages/NotFound';
-
-// Styles
-import './styles/App.css';
+import PrivateRoute from './components/PrivateRoute';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import Loading from './components/Loading';
+import './App.css';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { currentUser, loading } = useAuth();
+  const [appLoaded, setAppLoaded] = useState(false);
 
   useEffect(() => {
-    // Listen for auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-
-    // Cleanup subscription
-    return () => unsubscribe();
+    // Simulate checking for facial recognition libraries and other dependencies
+    setTimeout(() => {
+      setAppLoaded(true);
+    }, 1500);
   }, []);
 
-  if (loading) {
-    return <div className="loading">Loading...</div>;
+  if (loading || !appLoaded) {
+    return <Loading />;
   }
 
   return (
-    <UserProvider value={{ user, setUser }}>
-      <Router>
-        <div className="app">
-          <Navbar />
-          <main className="container">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
-              <Route path="/register" element={!user ? <Register /> : <Navigate to="/dashboard" />} />
-              <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
-              <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" />} />
-              <Route path="/focus" element={user ? <FocusDetection /> : <Navigate to="/login" />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </UserProvider>
+    <div className="app">
+      <Navbar />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={!currentUser ? <Login /> : <Navigate to="/dashboard" />} />
+          <Route path="/register" element={!currentUser ? <Register /> : <Navigate to="/dashboard" />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <Profile />
+              </PrivateRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   );
 };
 

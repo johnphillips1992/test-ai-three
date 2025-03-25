@@ -1,1 +1,1 @@
-4. Start the development server
+4. Run the development server:
