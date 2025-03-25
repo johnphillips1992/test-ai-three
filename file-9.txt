@@ -1,0 +1,26 @@
+## Usage
+
+1. Sign up for an account or log in
+2. Grant permission to access your webcam
+3. The app will analyze your facial expressions to determine your focus level
+4. Music will be played based on your focus level - calming music for low focus and fast tempo music for high focus
+5. You can view your focus history and analytics in the dashboard
+
+## Project Structure
+
+- `/src` - Source code
+  - `/components` - React components
+  - `/contexts` - React context providers
+  - `/hooks` - Custom React hooks
+  - `/pages` - Page components
+  - `/services` - Service modules for API calls
+  - `/types` - TypeScript type definitions
+  - `/utils` - Utility functions
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
