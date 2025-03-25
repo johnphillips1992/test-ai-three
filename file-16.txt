@@ -1,0 +1,13 @@
+### Usage
+
+1. Register a new account or log in
+2. Go to the Focus Detection page
+3. Click "Start Detection" to begin analyzing your focus level
+4. Music will automatically play based on your detected focus level
+5. You can save your focus sessions to track your progress over time
+
+## Deployment
+
+To deploy the application:
+
+1. Build the project
