@@ -1,22 +1,14 @@
-# Muse: Focus-Driven Music Application
+# Muse
 
-Muse is a web application that uses facial recognition technology to analyze users' expressions and provide personalized music that matches their current focus level. The app captures a user's webcam feed, detects their focus level, and plays calming music when the user is less focused or fast-tempo music when the user is focusing.
+Muse is a web application that uses facial recognition technology to analyze users' expressions and provide personalized music to match their current focus level. The app captures a user's webcam feed, detects their focus level, and then plays calming music when the user is less focused and fast tempo music when the user is focusing.
 
 ## Features
 
 - Real-time facial expression analysis
-- Personalized music playback based on detected focus level
-- User profiles with customizable preferences
-- Focus statistics and tracking
-- Responsive design for desktop and mobile devices
-
-## Technologies Used
-
-- Frontend: React with TypeScript and Vite
-- Backend: Vercel Serverless Functions
-- Authentication & Database: Firebase (Firestore)
-- Facial Recognition: Face-API.js
-- Styling: CSS modules
+- Personalized music recommendations based on focus level
+- User authentication and profile management
+- Music integration with Spotify
+- Focus level history and analytics
 
 ## Getting Started
 
@@ -24,8 +16,8 @@ Muse is a web application that uses facial recognition technology to analyze use
 
 - Node.js (v16 or higher)
 - npm or yarn
-- A Firebase account
-- A Vercel account (for deployment)
+- Firebase account
+- Spotify Developer account
 
 ### Installation
 
